@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "self:social_sensor.xcodeproj">
+      location = "group:/Users/jurimlee/Desktop/cplex_example/social_sensor/social_sensor/data_more_than_one_node.txt">
+   </FileRef>
+   <FileRef
+      location = "self:">
    </FileRef>
 </Workspace>

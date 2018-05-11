@@ -7,7 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3C119DFD20971E63002CADEE /* evaluation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3C119DFB20971E63002CADEE /* evaluation.cpp */; };
 		3C3120B72094110900CD25E4 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3C3120B62094110900CD25E4 /* main.cpp */; };
+		3C3120BF209411A000CD25E4 /* libconcert.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3C3120BE209411A000CD25E4 /* libconcert.a */; };
+		3C3120C3209411B900CD25E4 /* libcplexdistmip.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3C3120C0209411B900CD25E4 /* libcplexdistmip.a */; };
+		3C3120C4209411B900CD25E4 /* libilocplex.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3C3120C1209411B900CD25E4 /* libilocplex.a */; };
+		3C3120C5209411B900CD25E4 /* libcplex.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3C3120C2209411B900CD25E4 /* libcplex.a */; };
+		3C3120C7209411D600CD25E4 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3C3120C6209411D600CD25E4 /* CoreFoundation.framework */; };
+		3C3120C9209411DC00CD25E4 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3C3120C8209411DC00CD25E4 /* IOKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -23,8 +30,19 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		3C119DF92095B70E002CADEE /* initial_pattern.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = initial_pattern.txt; sourceTree = "<group>"; };
+		3C119DFB20971E63002CADEE /* evaluation.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = evaluation.cpp; sourceTree = "<group>"; };
+		3C119DFC20971E63002CADEE /* evaluation.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = evaluation.hpp; sourceTree = "<group>"; };
 		3C3120B32094110900CD25E4 /* social_sensor */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = social_sensor; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C3120B62094110900CD25E4 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		3C3120BE209411A000CD25E4 /* libconcert.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libconcert.a; path = "../../../../../Applications/CPLEX_Studio128/concert/lib/x86-64_osx/static_pic/libconcert.a"; sourceTree = "<group>"; };
+		3C3120C0209411B900CD25E4 /* libcplexdistmip.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcplexdistmip.a; path = "../../../../../Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic/libcplexdistmip.a"; sourceTree = "<group>"; };
+		3C3120C1209411B900CD25E4 /* libilocplex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libilocplex.a; path = "../../../../../Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic/libilocplex.a"; sourceTree = "<group>"; };
+		3C3120C2209411B900CD25E4 /* libcplex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcplex.a; path = "../../../../../Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic/libcplex.a"; sourceTree = "<group>"; };
+		3C3120C6209411D600CD25E4 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		3C3120C8209411DC00CD25E4 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
+		3C46442C20A373030084398A /* celf++_code_release */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "celf++_code_release"; sourceTree = "<group>"; };
+		3C851FD320A0391B00169480 /* data_more_than_one_node.txt */ = {isa = PBXFileReference; lastKnownFileType = text; name = data_more_than_one_node.txt; path = /Users/jurimlee/Desktop/cplex_example/social_sensor/social_sensor/data_more_than_one_node.txt; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -32,6 +50,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3C3120C9209411DC00CD25E4 /* IOKit.framework in Frameworks */,
+				3C3120C7209411D600CD25E4 /* CoreFoundation.framework in Frameworks */,
+				3C3120C3209411B900CD25E4 /* libcplexdistmip.a in Frameworks */,
+				3C3120C4209411B900CD25E4 /* libilocplex.a in Frameworks */,
+				3C3120C5209411B900CD25E4 /* libcplex.a in Frameworks */,
+				3C3120BF209411A000CD25E4 /* libconcert.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -43,6 +67,7 @@
 			children = (
 				3C3120B52094110900CD25E4 /* social_sensor */,
 				3C3120B42094110900CD25E4 /* Products */,
+				3C3120BD209411A000CD25E4 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -57,9 +82,27 @@
 		3C3120B52094110900CD25E4 /* social_sensor */ = {
 			isa = PBXGroup;
 			children = (
+				3C46442C20A373030084398A /* celf++_code_release */,
 				3C3120B62094110900CD25E4 /* main.cpp */,
+				3C851FD320A0391B00169480 /* data_more_than_one_node.txt */,
+				3C119DFB20971E63002CADEE /* evaluation.cpp */,
+				3C119DFC20971E63002CADEE /* evaluation.hpp */,
+				3C119DF92095B70E002CADEE /* initial_pattern.txt */,
 			);
 			path = social_sensor;
+			sourceTree = "<group>";
+		};
+		3C3120BD209411A000CD25E4 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				3C3120C8209411DC00CD25E4 /* IOKit.framework */,
+				3C3120C6209411D600CD25E4 /* CoreFoundation.framework */,
+				3C3120C2209411B900CD25E4 /* libcplex.a */,
+				3C3120C0209411B900CD25E4 /* libcplexdistmip.a */,
+				3C3120C1209411B900CD25E4 /* libilocplex.a */,
+				3C3120BE209411A000CD25E4 /* libconcert.a */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -119,6 +162,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3C3120B72094110900CD25E4 /* main.cpp in Sources */,
+				3C119DFD20971E63002CADEE /* evaluation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -238,6 +282,21 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				FRAMEWORK_SEARCH_PATHS = (
+					"/Applications/CPLEX_Studio128/concert/lib/x86-64_osx/static_pic",
+					"/Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic",
+				);
+				HEADER_SEARCH_PATHS = (
+					/Applications/CPLEX_Studio128/cplex/include,
+					"$(inherited)",
+					/Applications/CPLEX_Studio128/concert/include,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic",
+					"/Applications/CPLEX_Studio128/concert/lib/x86-64_osx/static_pic",
+				);
+				OTHER_CFLAGS = "-DIL_STD";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -246,6 +305,21 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				FRAMEWORK_SEARCH_PATHS = (
+					"/Applications/CPLEX_Studio128/concert/lib/x86-64_osx/static_pic",
+					"/Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic",
+				);
+				HEADER_SEARCH_PATHS = (
+					/Applications/CPLEX_Studio128/cplex/include,
+					"$(inherited)",
+					/Applications/CPLEX_Studio128/concert/include,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic",
+					"/Applications/CPLEX_Studio128/concert/lib/x86-64_osx/static_pic",
+				);
+				OTHER_CFLAGS = "-DIL_STD";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
