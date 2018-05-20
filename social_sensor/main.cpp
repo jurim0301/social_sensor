@@ -9,6 +9,8 @@
 //
 #include <cstdio>
 #include <map>
+#include <cmath>
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <cstring>
@@ -27,10 +29,15 @@ using namespace std;
 //  STL : standard template library
 ILOSTLBEGIN
 
+int run_columngeneration(int num, int num_mode, int mode);
 
 float process_query(int type, string inp);
 
+void pricing_algorithm(int num_ss, IloNumArray dv);
+
 void process_userdata();
+
+IloNumArray run_iteration(IloEnv env,IloModel curOpt, IloNumVarArray choose, IloRangeArray constraints, IloNumVarArray cover, int num_tweet,int num_user, int num_pattern);
 
 void report1 (IloCplex& zSolver, IloNumVarArray prob);
 
@@ -43,6 +50,8 @@ void report2 (IloAlgorithm& patSolver, IloNumVarArray ss,
 //FILE *query_out = fopen("query_out.txt", "w");
 FILE *in = fopen("data_more_than_one_node.txt", "r");
 int n;
+int num_ss;
+float max_z;
 string new_ss[NUM_SS];
 
 //userid의 list가 소셜 센서 set이다.
@@ -58,6 +67,7 @@ struct _tweet {
     vector<int> topic_num;
     int rtw_count;
     int root_index;
+    int is_covered = 0;
     int tree_size;//사실상...트리 전체의 사이즈
     double cover_point=0.1;//cover 점수
     vector<int> rtw;//자식의 index값을 가진다.
@@ -73,19 +83,77 @@ struct _user {
 map<string, _user> user;
 vector<string> indexToUser;
 
+struct _sensor_node {
+    int index;//user의 index
+    double point;
+    int calced;
+};
 
+_sensor_node sheap[301004];
 
+vector<string> first_ss;
 
+vector<int> new_ss_idx;
+
+// dd는 cost 주는 함수
+double dd(int indexx, IloNumArray *dv) {
+    return 0.0;//(((indexx + 100))*rand()) % 12;// +tweet[indexx].tree_size;
+}
+
+bool sensor_cmp(_sensor_node a, _sensor_node b) {
+    if (a.point < b.point) return 1;
+    return 0;
+}
 
 
 int main(int argc, char **argv) {
+    run_columngeneration(2, 1, 1);
+    cout << "the number of nodes in social sensor : " << num_ss << endl;
+    cout << "Z value : " << max_z << endl;
+    return 0;
+}
+
+void ev1_objective_function_comparison(int mode) {
+    //  1. Objective Function Comparison
+    //      4개의 다른 값 (covered, time, topic coverage, out-degree)의 비교
+    //      x축 : 선택할 수 있는 social sensor의 개수
+    //      y축 : reward (normalize한 값의 비교)
+    
+    for (int i=0;i<5;i++) {
+        run_columngeneration(i+2, 1, mode);
+        cout << "num_ss (x) : " << num_ss << " reward (y) : " << max_z <<endl;
+    }
+}
+
+void ev2_objective_functions_comparison(int num_mode, int mode) {
+    //  2. 1에서 한 실험에서 값을 2개 혹은 3개로 묶어서 비교
+    //      x축 : 선택할 수 있는 social sensor의 개수
+    //      y축 : reward (normalize한 값의 합?의 비교)
+    //  input : num_mode > 몇 개의 숫자가 들어올지, mode > 12 (1번 OF과 2번 OF)
+    
+    for (int i=0;i<5;i++) {
+        run_columngeneration(i+2, num_mode, mode);
+        cout << "num_ss (x) : " << num_ss << " reward (y) : " << max_z << endl;
+    }
+    
+}
+
+void ev3_train_test() {
+    //  3. Jure 논문의 7번 실험 - 50% 데이터로 SS구하고 -> 나머지 50%로 reward
+    //      x축 : cost (Jure에서는 cost로 함) 총 포함되는 데이터의 개수 (트윗 글의 개수)
+    //      y축 : reward (normalize한 값의 합의 비교)
+    
+}
+
+
+
+
+int run_columngeneration(int num, int num_mode, int mode) {
     IloEnv env;
+    num_ss = num;
     int k, l=0;
     try {
 
-        
-        //  모델 만들기 - 현재 variable 가지고 최선의 확률 구하는 모델
-        IloModel curOpt(env);
         
         //  data load
         process_userdata();
@@ -96,152 +164,49 @@ int main(int argc, char **argv) {
         IloInt num_tweet = tweet.size();
         
         
-        //  cutting-optimization 모델 만들기 (column-wise로 할 것)
-        IloNumVarArray choose(env, num_pattern, 0.01, 0.25, ILOFLOAT);
-        IloRangeArray constraint(env);
-        IloNumVarArray cover(env, num_tweet, 0.0, 1.0, ILOFLOAT);
-        IloNumVar z(env);
-        
         clock_t begin = clock();
-        constraint.add(IloSum(choose) <= 1);
+        //constraint.add(IloSum(choose) <= 1);
         string temp_;
-        string first_ss[100];
         
-        first_ss[0] = " unpacker binitamshah";
-        first_ss[1] = " IBMSecurity MickWilliamsPhD";
-        first_ss[2] = " dsadfeq11 Renaissancelre";
-        first_ss[3] = " NabeelAhmedBE malekal_morte";
-        //for (l=0;l<num_pattern;l++) {
-            
-            //temp = "";
-            //
-            //for (int f=0;f<NUM_SS;f++) {
-                //temp += " " +
-            //}
-        //}
-        for (k=0;k<num_tweet;k++) {
-            IloNumArray cover_w(env, num_pattern, 0.0, 1.0, ILOINT);
-            for (l=0;l<num_pattern;l++) {
-                string temp;
-                // concat initial user names
-                //inp = "tweet_num the_num_of_ppl_in_ss a b c"
-                
-                temp = to_string(k) + " " + to_string(NUM_SS)+first_ss[l];
-                //for (int f=0;f<NUM_SS;f++)
-                    //temp += " " + tweet[rand() % num_tweet].user_id;
-                    
-                cover_w[l] = (int)process_query(1, temp);
-            }
-            
-            constraint.add(IloScalProd(choose, cover_w)-cover[k]>=0);
-        }
-        
-        //constraint.add(IloSum(cover)-z>=0);
-        cout << "Constraints added..." << endl;
-        curOpt.add(constraint);
-        curOpt.add(IloMaximize(env, IloSum(cover)));
-        
-        cout << "Constraints complete..." << (clock()-begin)/CLOCKS_PER_SEC << "secs" << endl;
-        cout << constraint[1] << endl;
-        
-        //  define solver
-        IloCplex ssSolver(curOpt);
-        
-        
-        //  pattern-generation
-        IloModel patGen (env);
-        IloNumArray size(env, num_user);
-        for (int h=0;h<num_user;h++)
-            size[h] = 1;
-        
-        IloObjective ReducedCost = IloAdd(patGen, IloMaximize(env, 1));
-        IloNumVarArray ss(env, num_user, 0.0, 1.0, ILOINT);
-        patGen.add(IloScalProd(size, ss) <= NUM_SS);
-        
-        IloCplex patSolver(patGen);
-        IloNumArray newPatt(env, NUM_SS);
-        
-        //  column-generation - dual value구하기(itr에 횟수 제한 해서 그만큼 돌리기 먼저 10번? 짧게 돌려볼 것)
-        //  MAX_ITR에서 정한 만큼 돌리기
-        IloNumArray price(env, num_tweet);
-        
-        //ssSolver.solve();
+        first_ss.push_back(" unpacker binitamshah");
+        first_ss.push_back(" IBMSecurity MickWilliamsPhD");
+        first_ss.push_back(" dsadfeq11 Renaissancelre");
+        first_ss.push_back(" NabeelAhmedBE malekal_morte");
         
         for (int j=0;j<MAX_ITR;j++) {
-            //IloCplex ssSolver(curOpt);
             // 기존에 있는 값으로 초기화 해주기
+
+            //  모델 만들기 - 현재 variable 가지고 최선의 확률 구하는 모델
+            IloModel curOpt(env);
             
-            ssSolver.solve();
-            cout << "choose : " << choose << endl;
-            report1(ssSolver,choose);
-            
-            cout << "get dual start" << endl;
-            for (int m=0;m<num_tweet;m++)
-                price[m] = ssSolver.getDual(constraint[m+1]);
-            
-            cout << "setLinarCoefs start" << endl;
-            ReducedCost.setLinearCoefs(ss, price);
-            
-            cout << "patSolver start" << endl;
-            patSolver.solve();
-            report2 (patSolver, ss, ReducedCost);
-            
-            
-            
-            if (patSolver.getValue(ReducedCost) < RC_EPS) {
-                cout << "patSolver.getValue : " << patSolver.getValue(ReducedCost) << endl;
-                break;
-            }
-            
-            cout << "patSolver.getValues" << endl;
-            patSolver.getValues(newPatt, ss);
-            
-            // 여기에 CELF++를 통해 얻은 소셜 센서가 들어가야함.
-            // 데이터셋 만들기
-            process_query(6, "");
-            
-            int result = system("/Users/jurimlee/Desktop/cplex_example/social_sensor/social_sensor/celf++_code_release/InfluenceModels -c config_test.txt");
-        
-            // 밑에꺼 돌리면 new_ss에 소셜 센서 2개 등장!
-            process_query(7, "");
-            //string second_ = " _odisseus binitamshah";
-            for (int s=0;s<NUM_SS;s++)
-                cout << "new ss" << s << new_ss[s] << endl;
-            //
-            //new_ss[0] = "_odisseus";
-            //new_ss[1] = "binitamshah";
-            
-            string add_pattern = "";
-            for (l=0;l<NUM_SS;l++)
-                add_pattern += " " + new_ss[l];
-            first_ss[num_pattern] =add_pattern;
-            
-            num_pattern += 1;
+            //  cutting-optimization 모델 만들기 (column-wise로 할 것)
             IloNumVarArray choose(env, num_pattern, 0.01, 0.25, ILOFLOAT);
             IloRangeArray constraint(env);
             IloNumVarArray cover(env, num_tweet, 0.0, 1.0, ILOFLOAT);
+            IloNumVar z(env);
             
-            constraint.add(IloSum(choose)<=1);
-            for (k=0;k<num_tweet;k++) {
-                IloNumArray cover_w(env, num_pattern, 0.0, 1.0, ILOINT);
-                for (l=0;l<num_pattern;l++) {
-                    string temp;
-                    temp = to_string(k) + " " + to_string(NUM_SS)+first_ss[l];
-                    cover_w[l] = (int)process_query(1, temp);
-                }
-                
-                constraint.add(IloScalProd(choose, cover_w)-cover[k]>=0);
-            }
-            IloModel curOpt(env);
-            //constraint.add(IloSum(cover)-z>=0);
-            curOpt.add(constraint);
-            curOpt.add(IloMaximize(env, IloSum(cover)));
-        
-            // ssSolver cleaning code 추가하기
-            //IloCplex ssSolver(curOpt);
-            //ssSolver.solve();
-            //cout << "choose : " << choose << endl;
-            //report1(ssSolver,choose);
+            IloNumArray dv = run_iteration(env, curOpt, choose, constraint, cover, num_tweet, num_user, num_pattern);
+            
+            // pricing algorithm 돌리기
+            pricing_algorithm(num_ss, dv);
+            
+            
+            string add_pattern = "";
+            for (l=0;l<num_ss;l++)
+                add_pattern += " " + indexToUser[new_ss_idx[l]];
+            
+            for (int k=0;k<first_ss.size();k++)
+                cout << "new social sensor" << k << ": " << first_ss[k] << endl;
+            first_ss.push_back(add_pattern);
+            
+            choose.end();
+            constraint.end();
+            cover.end();
+            curOpt.end();
+            
+            
+            
+            num_pattern += 1;
             
         }
     }
@@ -251,6 +216,7 @@ int main(int argc, char **argv) {
     catch (...) {
         cerr << "Unknown Error" << endl;
     }
+         
     return 0;
 }
 
@@ -441,6 +407,152 @@ float process_query(int type, string inp) {
     return 0.0;
 }
 
+void pricing_algorithm(int num_ss, IloNumArray dv) {
+    new_ss_idx.clear();
+    map<string, IloNum> covering;
+    int i, j;
+    int n;
+    //fscanf(query_in, "%d", &n);
+    n = num_ss;
+    int usernum = indexToUser.size();
+    int hsize = 0;
+    for (i = 0; i < usernum; i++) { // initial heap 채우기
+        sheap[hsize].index = i;
+        sheap[hsize].point = 0;
+        sheap[hsize].calced = 0;
+        int len = user[indexToUser[i]].tweets.size();
+        for (j = 0; j < len; j++)
+        {
+            if (!tweet[user[indexToUser[i]].tweets[j]].is_covered)
+            {
+                covering[tweet[user[indexToUser[i]].tweets[j]].identifier] = dv[user[indexToUser[i]].tweets[j]];
+            }
+        }
+        for (map<string, double>::iterator it = covering.begin(); it != covering.end(); ++it) {
+            sheap[hsize].point += it->second;
+        }
+        hsize++;
+        std::push_heap(sheap, sheap + hsize, sensor_cmp);
+        covering.clear();
+    }
+    if (n > hsize) {
+        cout << "Sensor size is too big!" << endl;
+        //fprintf(query_out, "Sensor Size Is Too Big!!!!!!!!!!\n");
+    }
+    for (i = 0; i < n; i++)//heap에서 하나씩 빼기
+    {
+        int forcheck = 0;
+        while (sheap[0].calced!=i) {
+            _sensor_node temp;
+            temp = sheap[0];
+            temp.point = 0;
+            temp.calced = i;
+            sheap[0] = sheap[hsize - 1];
+            std::pop_heap(sheap, sheap + hsize, sensor_cmp);
+            hsize--;
+            string uid = indexToUser[temp.index];
+            int len = user[uid].tweets.size();
+            for (j = 0; j < len; j++)
+            {
+                if (!tweet[user[uid].tweets[j]].is_covered)
+                {
+                    covering[tweet[user[uid].tweets[j]].identifier] = dv[user[uid].tweets[j]];
+                }
+            }
+            for (map<string, double>::iterator it = covering.begin(); it != covering.end(); ++it) {
+                temp.point += it->second;
+            }
+            sheap[hsize] = temp;
+            hsize++;
+            std::push_heap(sheap, sheap + hsize, sensor_cmp);
+            covering.clear();
+            forcheck++;
+        }
+        printf("%d번만에 찾음\n", forcheck);
+        new_ss_idx.push_back(sheap[0].index);
+        //fprintf(query_out, "%d\n", sheap[0].index);
+        //fprintf(query_out, "%d개의 트윗을 만듦\n", user[indexToUser[sheap[0].index]].tweets.size());
+        std::pop_heap(sheap, sheap + hsize, sensor_cmp);
+        hsize--;
+    }
+    for(i=0;i<tweet.size();i++){
+        tweet[i].is_covered=0;
+    }
+}
+
+IloNumArray run_iteration(IloEnv env,IloModel curOpt, IloNumVarArray choose, IloRangeArray constraints, IloNumVarArray cover, int num_tweet,int num_user, int num_pattern) {
+    
+    constraints.add(IloSum(choose) <= 1);
+    
+    for (int k=0;k<num_tweet;k++) {
+        IloNumArray cover_w(env, num_pattern, 0.0, 1.0, ILOINT);
+        for (int l=0;l<num_pattern;l++) {
+            string temp;
+            // concat initial user names
+            //inp = "tweet_num the_num_of_ppl_in_ss a b c"
+            
+            temp = to_string(k) + " " + to_string(NUM_SS)+first_ss[l];
+            cover_w[l] = (int)process_query(1, temp);
+        }
+        
+        constraints.add(IloScalProd(choose, cover_w)-cover[k]>=0);
+    }
+    
+    //constraint.add(IloSum(cover)-z>=0);
+    cout << "Constraints added..." << endl;
+    curOpt.add(constraints);
+    curOpt.add(IloMaximize(env, IloSum(cover)));
+    
+ 
+    //  define solver
+    IloCplex ssSolver(curOpt);
+    
+    
+    //  pattern-generation
+    IloModel patGen (env);
+    IloNumArray size(env, num_user);
+    for (int h=0;h<num_user;h++)
+        size[h] = 1;
+    
+    IloObjective ReducedCost = IloAdd(patGen, IloMaximize(env, 1));
+    IloNumVarArray ss(env, num_user, 0.0, 1.0, ILOINT);
+    patGen.add(IloScalProd(size, ss) <= NUM_SS);
+    
+    IloCplex patSolver(patGen);
+    IloNumArray newPatt(env, NUM_SS);
+    
+    //  column-generation - dual value구하기(itr에 횟수 제한 해서 그만큼 돌리기 먼저 10번? 짧게 돌려볼 것)
+    //  MAX_ITR에서 정한 만큼 돌리기
+    IloNumArray dv(env, num_tweet);
+    
+    ssSolver.solve();
+    
+    cout << "choose : " << choose << endl;
+    report1(ssSolver,choose);
+    cout << "get dual start" << endl;
+    for (int m=0;m<num_tweet;m++)
+        dv[m] = -ssSolver.getDual(constraints[m+1]);
+    
+    //cout << "setLinarCoefs start" << endl;
+    ReducedCost.setLinearCoefs(ss, dv);
+    
+    //cout << "patSolver start" << endl;
+    patSolver.solve();
+    //report2 (patSolver, ss, ReducedCost);
+    
+    
+    
+    if (patSolver.getValue(ReducedCost) < RC_EPS) {
+        cout << "DONE, patSolver.getValue : " << patSolver.getValue(ReducedCost) << endl;
+        return dv;
+    }
+    
+    cout << "patSolver.getValues" << endl;
+    patSolver.getValues(newPatt, ss);
+    
+    ssSolver.end();
+    return dv;
+}
 
 
 //  트위터 데이터로 트리 만들기
@@ -523,6 +635,7 @@ void report1 (IloCplex& zSolver, IloNumVarArray choose) {
     
     cout << endl;
     cout << "Sum of Z " << zSolver.getObjValue() << endl;
+    max_z = zSolver.getObjValue();
     cout << endl;
     for (IloInt j=0; j < choose.getSize(); j++) {
         cout << "   Z" << j << " = " << zSolver.getValue(choose[j]) << endl;

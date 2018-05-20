@@ -41,7 +41,6 @@
 		3C3120C2209411B900CD25E4 /* libcplex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcplex.a; path = "../../../../../Applications/CPLEX_Studio128/cplex/lib/x86-64_osx/static_pic/libcplex.a"; sourceTree = "<group>"; };
 		3C3120C6209411D600CD25E4 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		3C3120C8209411DC00CD25E4 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
-		3C46442C20A373030084398A /* celf++_code_release */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "celf++_code_release"; sourceTree = "<group>"; };
 		3C851FD320A0391B00169480 /* data_more_than_one_node.txt */ = {isa = PBXFileReference; lastKnownFileType = text; name = data_more_than_one_node.txt; path = /Users/jurimlee/Desktop/cplex_example/social_sensor/social_sensor/data_more_than_one_node.txt; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
@@ -82,7 +81,6 @@
 		3C3120B52094110900CD25E4 /* social_sensor */ = {
 			isa = PBXGroup;
 			children = (
-				3C46442C20A373030084398A /* celf++_code_release */,
 				3C3120B62094110900CD25E4 /* main.cpp */,
 				3C851FD320A0391B00169480 /* data_more_than_one_node.txt */,
 				3C119DFB20971E63002CADEE /* evaluation.cpp */,

@@ -8,11 +8,12 @@
 
 #include "evaluation.hpp"
 
-void ev1_objective_function_comparison() {
+void ev1_objective_function_comparison(int mode) {
     //  1. Objective Function Comparison
     //      4개의 다른 값 (covered, time, topic coverage, out-degree)의 비교
     //      x축 : 선택할 수 있는 social sensor의 개수
     //      y축 : reward (normalize한 값의 비교)
+    
     
 }
 
@@ -27,7 +28,6 @@ void ev3_train_test() {
     //  3. Jure 논문의 7번 실험 - 50% 데이터로 SS구하고 -> 나머지 50%로 reward
     //      x축 : cost (Jure에서는 cost로 함) 총 포함되는 데이터의 개수 (트윗 글의 개수)
     //      y축 : reward (normalize한 값의 합의 비교)
-
     
 }
 
