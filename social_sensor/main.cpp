@@ -22,14 +22,22 @@
 
 #define NUM_SS 2
 #define RC_EPS 1.0e-6
-#define MAX_ITR 10
+#define MAX_ITR 5
 #define MAX_INP 30
 
 using namespace std;
 //  STL : standard template library
 ILOSTLBEGIN
 
-int run_columngeneration(int num, int num_mode, int mode);
+void ev1_objective_function_comparison(int mode);
+
+void ev2_objective_functions_comparison(int num_mode, int mode);
+
+void ev3_train_test(float percent, int total_data, int how_many_to_divide);
+
+void ev4_subrationality(float crossover_percent);
+
+void run_columngeneration(int num_ss, int num_itr, int num_mode, int mode,float percent, int total_data);
 
 float process_query(int type, string inp);
 
@@ -107,7 +115,8 @@ bool sensor_cmp(_sensor_node a, _sensor_node b) {
 
 
 int main(int argc, char **argv) {
-    run_columngeneration(2, 1, 1);
+    
+    run_columngeneration(2, MAX_ITR, 1, 1, 1.0, tweet.size());
     cout << "the number of nodes in social sensor : " << num_ss << endl;
     cout << "Z value : " << max_z << endl;
     return 0;
@@ -119,8 +128,8 @@ void ev1_objective_function_comparison(int mode) {
     //      x축 : 선택할 수 있는 social sensor의 개수
     //      y축 : reward (normalize한 값의 비교)
     
-    for (int i=0;i<5;i++) {
-        run_columngeneration(i+2, 1, mode);
+    for (int k=0;k<5;k++) {
+        run_columngeneration(k+2, MAX_ITR, 1, mode, 1.0,  tweet.size());
         cout << "num_ss (x) : " << num_ss << " reward (y) : " << max_z <<endl;
     }
 }
@@ -129,31 +138,59 @@ void ev2_objective_functions_comparison(int num_mode, int mode) {
     //  2. 1에서 한 실험에서 값을 2개 혹은 3개로 묶어서 비교
     //      x축 : 선택할 수 있는 social sensor의 개수
     //      y축 : reward (normalize한 값의 합?의 비교)
-    //  input : num_mode > 몇 개의 숫자가 들어올지, mode > 12 (1번 OF과 2번 OF)
     
-    for (int i=0;i<5;i++) {
-        run_columngeneration(i+2, num_mode, mode);
+    //  input : num_mode > 몇 개의 숫자가 들어올지, mode > 12 (1번 OF과 2번 OF)
+    for (int k=0;k<5;k++) {
+        run_columngeneration(k+2,MAX_ITR, num_mode, mode, 1.0, tweet.size());
         cout << "num_ss (x) : " << num_ss << " reward (y) : " << max_z << endl;
     }
     
 }
 
-void ev3_train_test() {
+void ev3_train_test(float percent, int total_data, int how_many_to_divide) {
     //  3. Jure 논문의 7번 실험 - 50% 데이터로 SS구하고 -> 나머지 50%로 reward
     //      x축 : cost (Jure에서는 cost로 함) 총 포함되는 데이터의 개수 (트윗 글의 개수)
     //      y축 : reward (normalize한 값의 합의 비교)
     
+    //  input : percent > 몇 퍼센트 training data로 넣을 것인지
+    //          total_data > 사용할 총 데이터 수
+    //          how_many_to_divide > total_data를 몇 개로 나눌 것인지
+    
+    vector<float> data_num;
+    for (int k=0;k<how_many_to_divide;k++) {
+        data_num.push_back(total_data * (k+1) / (float)how_many_to_divide);
+    }
+    
+    for (int k=0;k<how_many_to_divide;k++) {
+        run_columngeneration(NUM_SS,MAX_ITR, 1, 1, percent, data_num[k]);
+        cout << "cost (x) : " << data_num[k] << " reward (y) : " << max_z << endl;
+    }
+}
+
+void ev4_subrationality(float crossover_percent) {
+    //  4. Subrationality, bounded-reality 이론 적용
+    //      이론 : 사람은 항상 같은 선택을 하지 않는다고 가정. 선택이 달라질 수 있음
+    //      적용 : test set을 조금씩 바꿈 (retweet pattern swapping, crossover - genetic algorithm) => 이걸로 실험해보기
+    //      실험 : pure strategy로 social sensor구한 경우와 mixed strategy로 social sensor구한 경우의 reward 비교
+    //              (만약 시간 있으면 Weibo VIP을 ground-truth로 한 실험 진행)
+    
+    // pure strategy
+    cout << "========== pure strategy result ==========" << endl;
+    run_columngeneration(NUM_SS, 1, 1, 1, 1.0, tweet.size());
+    cout << "num_ss (x) : " << num_ss << " reward (y) : " << max_z <<endl;
+    
+    // mixed strategy
+    cout << "========== mixed strategy result ==========" << endl;
+    run_columngeneration(NUM_SS, MAX_ITR, 1, 1, 1.0, tweet.size());
+    cout << "num_ss (x) : " << num_ss << " reward (y) : " << max_z <<endl;
+    
 }
 
 
-
-
-int run_columngeneration(int num, int num_mode, int mode) {
+void run_columngeneration(int num_ss, int num_itr, int num_mode, int mode,float percent, int total_data) {
     IloEnv env;
-    num_ss = num;
     int k, l=0;
     try {
-
         
         //  data load
         process_userdata();
@@ -170,10 +207,10 @@ int run_columngeneration(int num, int num_mode, int mode) {
         
         first_ss.push_back(" unpacker binitamshah");
         first_ss.push_back(" IBMSecurity MickWilliamsPhD");
-        first_ss.push_back(" dsadfeq11 Renaissancelre");
-        first_ss.push_back(" NabeelAhmedBE malekal_morte");
+        //first_ss.push_back(" dsadfeq11 Renaissancelre");
+        //first_ss.push_back(" NabeelAhmedBE malekal_morte");
         
-        for (int j=0;j<MAX_ITR;j++) {
+        for (int j=0;j<num_itr;j++) {
             // 기존에 있는 값으로 초기화 해주기
 
             //  모델 만들기 - 현재 variable 가지고 최선의 확률 구하는 모델
@@ -216,8 +253,6 @@ int run_columngeneration(int num, int num_mode, int mode) {
     catch (...) {
         cerr << "Unknown Error" << endl;
     }
-         
-    return 0;
 }
 
 
@@ -360,7 +395,7 @@ float process_query(int type, string inp) {
     }
     else if (type == 6) {//
         int i, j, k;
-        FILE *query_out = fopen("/Users/jurimlee/Desktop/cplex_example/social_sensor/social_sensor/celf++_code_release/datasets/celf_training.txt", "w");
+        FILE *query_out = fopen("./celf_training.txt", "w");
         //fprintf(query_out, "%d\n",NUM_SS);
         for (i = 0; i < indexToUser.size(); i++)
         {
@@ -470,6 +505,7 @@ void pricing_algorithm(int num_ss, IloNumArray dv) {
         }
         printf("%d번만에 찾음\n", forcheck);
         new_ss_idx.push_back(sheap[0].index);
+        cout << "User : " << indexToUser[sheap[0].index] << endl;
         //fprintf(query_out, "%d\n", sheap[0].index);
         //fprintf(query_out, "%d개의 트윗을 만듦\n", user[indexToUser[sheap[0].index]].tweets.size());
         std::pop_heap(sheap, sheap + hsize, sensor_cmp);
