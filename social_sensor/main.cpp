@@ -629,7 +629,8 @@ void pricing_algorithm(int n, IloNumArray dv) {
 
 IloNumArray run_iteration(IloEnv env,IloModel curOpt, IloNumVarArray choose, IloRangeArray constraints, IloNumVarArray cover, int num_tweet,int num_user, int num_pattern, int num_mode, int mode) {
 
-    
+    //  여기서부터 constraints add...
+    //  현재 row-wise이므로 column-wise로 변경해줘야함..
     constraints.add(IloSum(choose) <= 1);
     cout << "mode : " << mode << endl;
     //////
