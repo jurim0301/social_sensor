@@ -20,7 +20,7 @@
 #include <ilcplex/ilocplex.h>
 
 
-#define NUM_SS 4
+//#define NUM_SS 4
 #define MAX_ITR 2
 #define MAX_INP 30
 #define MAX_OUT 15224
@@ -33,19 +33,27 @@ void ev1(int mode);
 
 void ev2(int mode);
 
-void ev3(float percent, int total_data, int how_many_to_divide);
+void ev3(int mode);
 
-void ev4(float crossover_percent);
+void ev3_train(int mode);
+
+void ev4(int mode);
+
+void ev4_train(int mode);
 
 void run_columngeneration(int num_ss, int num_itr,int num_mode,int mode,float percent, int total_data);
 
-float process_query(int type, string inp);
+IloNumArray calculate_obj(IloEnv env, int num_tweet, int mode, int vec_i);
+
+double process_query(int type, string inp, int topic_num);
 
 void pricing_algorithm(int num_ss, IloNumArray dv);
 
-void process_userdata();
+void process_userdata(FILE* in);
 
-IloNumArray run_iteration(IloEnv env,IloModel curOpt, IloNumVarArray choose, IloRangeArray constraints, IloNumVarArray cover, int num_tweet,int num_user, int num_pattern, int num_mode,int mode);
+//IloNumArray run_iteration(IloEnv env,IloModel curOpt, IloNumVarArray choose, IloRangeArray constraints, IloNumVarArray cover, int num_tweet,int num_user, int num_pattern, int num_mode,int mode);
+
+IloNumArray run_iteration(IloEnv env, IloModel curOpt, IloObjective obj, IloRangeArray constraints, int num_tweet, int mode, IloNumVarArray choose);
 
 void report1 (IloCplex& zSolver, IloNumVarArray prob);
 
@@ -53,13 +61,24 @@ void report1 (IloCplex& zSolver, IloNumVarArray prob);
 
 //FILE *query_in = fopen("query.txt", "r");
 //FILE *query_out = fopen("query_out.txt", "w");
-FILE *in = fopen("data_more_than_one_node_june.txt", "r");
+
+FILE *in = fopen("data_more_than_one_node_june_train.txt", "r");
+FILE *test = fopen("data_more_than_one_node_june_test.txt", "r");
+//FILE *in = fopen("bitcoin/bitcoin_forum_train.txt", "r");
+//FILE *test = fopen("bitcoin/bitcoin_forum_test.txt", "r");
+float min_prob = 0.0;
+float max_prob = 0.25;
 int n;
 int num_ss;
 float max_z;
 int ss;
 int itr;
-string new_ss[NUM_SS];
+int d_mode;
+
+
+
+// 안쓰는 어레이
+string new_ss[100];
 
 //userid의 list가 소셜 센서 set이다.
 //userid list가 각각 하나의 S_i (소셜센서 셋)이 된다.
@@ -123,14 +142,30 @@ int main(int argc, char **argv) {
     int mode = stoi(num);
     ss = stoi(argv[2]);
     itr = stoi(argv[3]);
+    max_prob = stof(argv[4]);
+    d_mode = stoi(argv[5]);
+    
+    if(d_mode==0) {
+        in = fopen("data_more_than_one_node_june_train.txt", "r");
+        test = fopen("data_more_than_one_node_june_test.txt", "r");
+    }
+    else if(d_mode==1) {
+        in = fopen("bitcoin_forum_train.txt", "r");
+        test = fopen("bitcoin_forum_test.txt", "r");
+    }
     
     
     cout << "the number of sensors in one social sensor set : " << ss << endl;
     cout << "the number of iteration : " << itr << endl;
     
-    run_columngeneration(ss, itr,strlen(num), mode, 1.0, tweet.size());
-    cout << "the number of nodes in social sensor : " << num_ss << endl;
+    //run_columngeneration(ss, itr,strlen(num), mode, 1.0, tweet.size());
+    //ev3(mode);
+    //ev3_train(mode);
+    ev4(mode);
+    ev4_train(mode);
+    cout << "the number of nodes in social sensor : " << ss << endl;
     cout << "Z value : " << max_z << endl;
+    
     return 0;
 }
 
@@ -143,10 +178,11 @@ void run_columngeneration(int num_ss, int num_itr,int num_mode, int mode,float p
         
         //  data load
         
-        process_userdata();
+        process_userdata(in);
+        
+        cout << "COMPLETE" << endl;
         //  필요한 인티저 값들 변수에 할당하기 (패턴 수, 트윗 개수 등)
         //IloInt num_pattern = 4;
-        IloInt num_user = user.size();
         IloInt num_tweet = tweet.size();
         
         
@@ -155,29 +191,48 @@ void run_columngeneration(int num_ss, int num_itr,int num_mode, int mode,float p
         string temp_;
         
         ofstream f_result;
-        f_result.open("result_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+".txt");
+        f_result.open("result_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt");
 
         if (ss==5) {
-            first_ss.push_back(" CiscoSecurity EricMartorano RSAConference prodboct InfographicsIts");
-            first_ss.push_back(" drajaykumar_ias msftmmpc RussTechMtIsa Seccom_Global SenseiEnt");
-            second_ss.push_back("CiscoSecurity");
-            second_ss.push_back("EricMartorano");
-            second_ss.push_back("RSAConference");
-            second_ss.push_back("prodboct");
-            second_ss.push_back("InfographicsIts");
-            second_ss.push_back("drajaykumar_ias");
-            second_ss.push_back("msftmmpc");
-            second_ss.push_back("RussTechMtIsa");
-            second_ss.push_back("Seccom_Global");
-            second_ss.push_back("SenseiEnt");
+            if(d_mode == 0) {
+                first_ss.push_back(" CiscoSecurity EricMartorano RSAConference prodboct InfographicsIts");
+                first_ss.push_back(" drajaykumar_ias msftmmpc RussTechMtIsa Seccom_Global SenseiEnt");
+            }
+            else if (d_mode==1) {
+            // 비트코인 포럼 유저
+            first_ss.push_back(" OmegaStarScream LiteCoinGuy Elwar cuddaloreappu evoorhees");
+            first_ss.push_back(" CryptoCurrencyInc.com jonald_fyookball Bitcoinpro Anonymous Phinnaeus Gage");
+            }
+            
         }
         else if(ss==10) {
-            first_ss.push_back(" CiscoSecurity EricMartorano RSAConference prodboct InfographicsIts drajaykumar_ias msftmmpc RussTechMtIsa Seccom_Global SenseiEnt");
-            first_ss.push_back(" ncxgroup steven_ericksen EllipticSystems jdesai_storage CyberSecRicki cylanceinc smesecurity evankirstel MaribelLopez fjpanizo");
+            
+            if (d_mode==0) {
+                first_ss.push_back(" CiscoSecurity EricMartorano RSAConference prodboct InfographicsIts drajaykumar_ias msftmmpc RussTechMtIsa Seccom_Global SenseiEnt");
+                first_ss.push_back(" ncxgroup steven_ericksen EllipticSystems jdesai_storage CyberSecRicki cylanceinc smesecurity evankirstel MaribelLopez fjpanizo");
+            }
+            else if(d_mode==1) {
+                // 비트코인 포럼 유저
+                first_ss.push_back(" OmegaStarScream LiteCoinGuy Elwar cuddaloreappu evoorhees CryptoCurrencyInc.com jonald_fyookball Bitcoinpro Anonymous Phinnaeus Gage");
+                first_ss.push_back(" the founder Coinbuddy RawDog remotemass the_poet hl5460 OROBTC BittBurger alyssa85 pawel7777");
+
+            }
+            
         }
         else if(ss==20) {
-            first_ss.push_back(" CiscoSecurity EricMartorano RSAConference prodboct InfographicsIts drajaykumar_ias msftmmpc RussTechMtIsa Seccom_Global SenseiEnt ncxgroup steven_ericksen EllipticSystems jdesai_storage CyberSecRicki cylanceinc smesecurity evankirstel MaribelLopez fjpanizo");
-            first_ss.push_back(" mistergmedina Sarahetodd BAESystems_AI STIDIA_Security jjsystems jokichu scopeme afyonluoglu erikremmelzwaal FlynnPartyof5 CorvilInc sophos_info pauleriksen struppigel NoEwS herkeictgroup mflynn2 Cyber_Veille ITbadr matthieugarin");
+            
+            if(d_mode==0) {
+                first_ss.push_back(" CiscoSecurity EricMartorano RSAConference prodboct InfographicsIts drajaykumar_ias msftmmpc RussTechMtIsa Seccom_Global SenseiEnt ncxgroup steven_ericksen EllipticSystems jdesai_storage CyberSecRicki cylanceinc smesecurity evankirstel MaribelLopez fjpanizo");
+                first_ss.push_back(" mistergmedina Sarahetodd BAESystems_AI STIDIA_Security jjsystems jokichu scopeme afyonluoglu erikremmelzwaal FlynnPartyof5 CorvilInc sophos_info pauleriksen struppigel NoEwS herkeictgroup mflynn2 Cyber_Veille ITbadr matthieugarin");
+            }
+            else if(d_mode==1) {
+                // 비트코인 포럼 유저
+                first_ss.push_back(" OmegaStarScream LiteCoinGuy Elwar cuddaloreappu evoorhees CryptoCurrencyInc.com jonald_fyookball Bitcoinpro Anonymous Phinnaeus Gage the founder Coinbuddy RawDog remotemass the_poet hl5460 OROBTC BittBurger alyssa85 pawel7777");
+                first_ss.push_back(" MicroGuy cbeast Bit_Happy casascius Minecache jubalix pereira4 commandrix spazzdla shamzblueworld Kprawn cryptocurrencylive knight22 bbit Huobi-USD freightjoe TKeenan BitPay Business Solutions adamstgBit Yankee (BitInstant)");
+            }
+            
+
+            
         }
         
         //first_ss.push_back(" dsadfeq11 Renaissancelre");
@@ -187,33 +242,46 @@ void run_columngeneration(int num_ss, int num_itr,int num_mode, int mode,float p
             f_result << first_ss[vec_i] << "\n";
         
         IloInt num_pattern = first_ss.size();
+        IloModel curOpt(env);
+        // obj
+        IloObjective obj = IloMaximize(env);
+        //IloNumArray cover(env, num_tweet, 0.0, 1.0, ILOFLOAT);
+        //IloObjective cover = IloMaximize(env);
+        // c
+        IloRangeArray constraint(env);
+        // x
+        IloNumVarArray choose(env);
         
+        // 이미 구축해놓은 소셜 센서에 대해 constraints 업데이트
+        
+        for (int twt_num=0; twt_num<num_tweet;twt_num++) {
+            //  트윗 수만큼 constraint 추가해주기
+            constraint.add(IloRange(env, 0.0, IloInfinity));
+        }
+        for (int vec_i=0; vec_i<first_ss.size();vec_i++) {
+            IloNumArray cover_twt = calculate_obj(env, num_tweet, mode, vec_i);
+            IloNumColumn expr(env);
+            for (int t=0;t<constraint.getSize();t++) {
+                expr += constraint[t](cover_twt[t]);
+            }
+            choose.add(IloNumVar(obj(IloSum(cover_twt))+expr, min_prob, max_prob));
+        }
+            
+        
+
         for (int j=0;j<num_itr;j++) {
             cout << "num_pattern : " << num_pattern << endl;
             
-            // 기존에 있는 값으로 초기화 해주기
-            
-            //  모델 만들기 - 현재 variable 가지고 최선의 확률 구하는 모델
-            IloModel curOpt(env);
-            
-            //  cutting-optimization 모델 만들기 (column-wise로 할 것)
-            IloNumVarArray choose(env, num_pattern, 0.01, 0.5, ILOFLOAT);
-            IloRangeArray constraint(env);
-            IloNumVarArray cover(env, num_tweet, 0.0, 1.0, ILOFLOAT);
-            IloNumVar z(env);
             
             clock_t start = clock();
             // reduced master problem
-            IloNumArray dv = run_iteration(env, curOpt, choose, constraint, cover, num_tweet, num_user, num_pattern,num_mode, mode);
+            //IloNumArray dv = run_iteration(env, curOpt, choose, constraint, cover, num_tweet, num_user, num_pattern,num_mode, mode);
+            IloNumArray dv = run_iteration(env, curOpt, obj, constraint, num_tweet, mode, choose);
+        
             
             cout << "iteration time : " << (float)(clock() - start)/CLOCKS_PER_SEC << endl;
-            ofstream myfile;
-            string file_name = "dv_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr);
-            myfile.open(file_name);
-            for (int h=0;h<dv.getSize();h++) {
-                myfile << dv[h] << "\n";
-            }
-            myfile.close();
+            
+            
             
             // pricing algorithm 돌리기
             pricing_algorithm(num_ss, dv);
@@ -231,13 +299,18 @@ void run_columngeneration(int num_ss, int num_itr,int num_mode, int mode,float p
             
             f_result << first_ss[first_ss.size()-1] << "\n";
             
-            choose.end();
-            constraint.end();
-            cover.end();
-            curOpt.end();
-            dv.end();
+            
+            IloNumArray cover_twt = calculate_obj(env, num_tweet, mode, num_pattern);
+            IloNumColumn expr(env);
+            for (int t=0;t<constraint.getSize();t++) {
+                expr += constraint[t](cover_twt[t]);
+            }
+            choose.add(IloNumVar(obj(IloSum(cover_twt))+expr, min_prob, max_prob));
+            
+            
             
             num_pattern += 1;
+            
             
         }
         f_result.close();
@@ -249,6 +322,46 @@ void run_columngeneration(int num_ss, int num_itr,int num_mode, int mode,float p
         cerr << "Unknown Error" << endl;
     }
     
+}
+IloNumArray calculate_obj(IloEnv env, int num_tweet, int mode, int vec_i) {
+    clock_t start = clock();
+    IloNum t = 0.0;
+    IloNumArray cover_twt(env, num_tweet);
+    for (int twt_num=0; twt_num<num_tweet;twt_num++) {
+        string temp = to_string(twt_num) + " " + to_string(ss)+first_ss[vec_i];
+        int mode_ = mode;
+        int length = 1;
+        float covered = (float)process_query(1, temp, 0);
+        while (mode_ != 0) {
+            int type = mode_ % 10;
+            if (type==1) {
+                //covered
+                cover_twt[twt_num] += covered;
+            }
+            else if(type==2) {
+                //topic covered
+                if (covered == 1.0) {
+                    for (int topic_num=0;topic_num<tweet[twt_num].topic.size();topic_num++)
+                        cover_twt[twt_num] += (float)tweet[twt_num].topic[topic_num];
+                }
+            }
+            else if(type==3) {
+                //out-link
+                if (covered == 1.0) {
+                    cover_twt[twt_num] += (float)tweet[twt_num].rtw_count/MAX_OUT;
+                }
+            }
+            else if(type==4) {
+                //time reward
+                cover_twt[twt_num] += (float)process_query(5, temp, 0);
+            }
+            mode_ /= 10;
+            length += 1;
+        }
+        cover_twt[twt_num] /= (float)length-1.0;
+    }
+    cout << "calculate_obj time elapsed : " << (clock()-start)/CLOCKS_PER_SEC << endl;
+    return cover_twt;
 }
 
 void ev1(int mode) {
@@ -289,46 +402,416 @@ void ev2(int mode) {
     
 }
 
-void ev3(float percent, int total_data, int how_many_to_divide) {
+void ev3(int mode) {
     //  3. Jure 논문의 7번 실험 - 50% 데이터로 SS구하고 -> 나머지 50%로 reward
     //      x축 : cost (Jure에서는 cost로 함) 총 포함되는 데이터의 개수 (트윗 글의 개수)
     //      y축 : reward (normalize한 값의 합의 비교)
     
-    //  input : percent > 몇 퍼센트 training data로 넣을 것인지
-    //          total_data > 사용할 총 데이터 수
-    //          how_many_to_divide > total_data를 몇 개로 나눌 것인지
+    //process_userdata(in);
+    process_userdata(test);
     
-    vector<float> data_num;
-    for (int k=0;k<how_many_to_divide;k++) {
-        data_num.push_back(total_data * (k+1) / (float)how_many_to_divide);
+    // social sensor 불러오기 -> 한 줄에 다 있다고 가정
+    char t_str[1004];
+    char c_str[100];
+    //string file_name = "result_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+".txt";
+    string result_file = "result_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt";
+    string choose_file = "choose_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt";
+    
+    ofstream exp;
+    string file_name = "ev_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt";
+    exp.open(file_name);
+    
+    ifstream result(result_file);
+    ifstream cs(choose_file);
+    
+    vector<float> chs;
+    while(cs.getline(c_str, 100)) {
+        chs.push_back(stof(c_str));
+    }
+
+    int itr = 0;
+    int num_tweet = tweet.size();
+    float total_z = 0.0;
+    float temp_z = 0.0;
+    clock_t start = clock();
+    IloNum t = 0.0;
+    float cover_twt[num_tweet];
+    //for (int j=0; j<num_tweet;j++)
+        //cover_twt[j] = 0.0;
+    
+    fill_n(cover_twt, num_tweet, 0.0);
+    
+    while(result.getline(t_str, 1004)) {
+        //for (int j=0; j<num_tweet;j++)
+            //cover_twt[j] = 0.0;
+        
+        fill_n(cover_twt, num_tweet, 0.0);
+        
+        if((itr > 2) && (chs[itr]==0.0)) {
+            itr += 1;
+            continue;
+        }
+        
+        for (int twt_num=0; twt_num<num_tweet;twt_num++) {
+            // social sensor의 집합
+            //cout << twt_num << endl;
+            string temp = to_string(twt_num) + " " + to_string(ss)+t_str;
+            int mode_ = mode;
+            int length = 1;
+            float covered = (float)process_query(1, temp, 0);
+            while (mode_ != 0) {
+                int type = mode_ % 10;
+                if (type==1) {
+                    //covered
+                    cover_twt[twt_num] += covered;
+                }
+                else if(type==2) {
+                    //topic covered
+                    if (covered == 1.0) {
+                        for (int topic_num=0;topic_num<tweet[twt_num].topic.size();topic_num++)
+                            cover_twt[twt_num] += (float)tweet[twt_num].topic[topic_num];
+                    }
+                }
+                else if(type==3) {
+                    //out-link
+                    if (covered == 1.0) {
+                        cover_twt[twt_num] += (float)tweet[twt_num].rtw_count/MAX_OUT;
+                    }
+                }
+                else if(type==4) {
+                    //time reward
+                    cover_twt[twt_num] += (float)process_query(5, temp, 0);
+                }
+                mode_ /= 10;
+                length += 1;
+            }
+            cover_twt[twt_num] /= (float)length-1.0;
+            temp_z += cover_twt[twt_num];
+            
+        }
+        exp << chs[itr] << " " << temp_z << "\n";
+        cout << chs[itr] << " " << temp_z << endl;
+        total_z += chs[itr]*temp_z;
+        temp_z = 0.0;
+        itr += 1;
     }
     
-    for (int k=0;k<how_many_to_divide;k++) {
-        //run_columngeneration(NUM_SS,MAX_ITR, 1, percent, data_num[k]);
-        cout << "cost (x) : " << data_num[k] << " reward (y) : " << max_z << endl;
+    
+    
+    cout << "calculate_obj time elapsed : " << (clock()-start)/CLOCKS_PER_SEC << endl;
+    cout << "total_z : " << total_z << endl;
+    cout << "the number of tweet : " << num_tweet << endl;
+    exp << "cover : " << (float)total_z/num_tweet << "\n";
+    cout << "cover : " << (float)total_z/num_tweet << endl;
+    
+    exp.close();
+}
+
+void ev3_train(int mode) {
+    //  3. Jure 논문의 7번 실험 - 50% 데이터로 SS구하고 -> 나머지 50%로 reward
+    //      x축 : cost (Jure에서는 cost로 함) 총 포함되는 데이터의 개수 (트윗 글의 개수)
+    //      y축 : reward (normalize한 값의 합의 비교)
+
+    process_userdata(in);
+    
+    // social sensor 불러오기 -> 한 줄에 다 있다고 가정
+    char t_str[1004];
+    char c_str[100];
+    //string file_name = "result_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+".txt";
+    string result_file = "result_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt";
+    string choose_file = "choose_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt";
+    
+    ofstream exp;
+    string file_name = "tev_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt";
+    exp.open(file_name);
+    
+    ifstream result(result_file);
+    ifstream cs(choose_file);
+    
+    vector<float> chs;
+    while(cs.getline(c_str, 100)) {
+        chs.push_back(stof(c_str));
     }
+    
+    int itr = 0;
+    int num_tweet = tweet.size();
+    float total_z = 0.0;
+    float temp_z = 0.0;
+    clock_t start = clock();
+    IloNum t = 0.0;
+    float cover_twt[num_tweet];
+    //for (int j=0; j<num_tweet;j++)
+        //cover_twt[j] = 0.0;
+    
+    fill_n(cover_twt, num_tweet, 0.0);
+    
+    while(result.getline(t_str, 1004)) {
+        
+        //for (int j=0; j<num_tweet;j++) {
+            //cover_twt[j] = 0.0;
+        //}
+        fill_n(cover_twt, num_tweet, 0.0);
+        
+        if((itr > 2) && (chs[itr]==0.0)) {
+            itr += 1;
+            continue;
+        }
+        cout << itr << endl;
+        
+        for (int twt_num=0; twt_num<num_tweet;twt_num++) {
+            // social sensor의 집합
+            //cout << twt_num << endl;
+            string temp = to_string(twt_num) + " " + to_string(ss)+t_str;
+            int mode_ = mode;
+            int length = 1;
+            float covered = (float)process_query(1, temp, 0);
+            while (mode_ != 0) {
+                int type = mode_ % 10;
+                if (type==1) {
+                    //covered
+                    cover_twt[twt_num] += covered;
+                }
+                else if(type==2) {
+                    //topic covered
+                    if (covered == 1.0) {
+                        for (int topic_num=0;topic_num<tweet[twt_num].topic.size();topic_num++)
+                            cover_twt[twt_num] += (float)tweet[twt_num].topic[topic_num];
+                    }
+                }
+                else if(type==3) {
+                    //out-link
+                    if (covered == 1.0) {
+                        cover_twt[twt_num] += (float)tweet[twt_num].rtw_count/MAX_OUT;
+                    }
+                }
+                else if(type==4) {
+                    //time reward
+                    cover_twt[twt_num] += (float)process_query(5, temp, 0);
+                }
+                mode_ /= 10;
+                length += 1;
+            }
+            cover_twt[twt_num] /= (float)length-1.0;
+            temp_z += cover_twt[twt_num];
+            
+        }
+        exp << chs[itr] << " " << temp_z << "\n";
+        cout << chs[itr] << " " << temp_z << endl;
+        total_z += chs[itr]*temp_z;
+        temp_z = 0.0;
+        itr += 1;
+    }
+    
+    
+    
+    cout << "calculate_obj time elapsed : " << (clock()-start)/CLOCKS_PER_SEC << endl;
+    cout << "total_z : " << total_z << endl;
+    cout << "the number of tweet : " << num_tweet << endl;
+    exp << "cover : " << (float)total_z/num_tweet << "\n";
+    cout << "cover : " << (float)total_z/num_tweet << endl;
+    
+    exp.close();
 }
 
-void ev4(float crossover_percent) {
-    //  4. Subrationality, bounded-reality 이론 적용
-    //      이론 : 사람은 항상 같은 선택을 하지 않는다고 가정. 선택이 달라질 수 있음
-    //      적용 : test set을 조금씩 바꿈 (retweet pattern swapping, crossover - genetic algorithm) => 이걸로 실험해보기
-    //      실험 : pure strategy로 social sensor구한 경우와 mixed strategy로 social sensor구한 경우의 reward 비교
-    //              (만약 시간 있으면 Weibo VIP을 ground-truth로 한 실험 진행)
+
+void ev4(int mode) {
+    process_userdata(test);
     
-    // pure strategy
-    cout << "========== pure strategy result ==========" << endl;
-    //run_columngeneration(NUM_SS, 1, 1, 1.0, tweet.size());
-    cout << "num_ss (x) : " << num_ss << " reward (y) : " << max_z <<endl;
+    // social sensor 불러오기 -> 한 줄에 다 있다고 가정
+    char t_str[1004];
+    char c_str[100];
+    //string file_name = "result_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+".txt";
+    string result_file = "ev4/_result_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt";
+    string choose_file = "choose_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt";
     
-    // mixed strategy
-    cout << "========== mixed strategy result ==========" << endl;
-    //run_columngeneration(NUM_SS, MAX_ITR, 1, 1.0, tweet.size());
-    cout << "num_ss (x) : " << num_ss << " reward (y) : " << max_z <<endl;
+    ofstream exp;
+    string file_name = "ev4/_tev_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt";
+    exp.open(file_name);
     
+    ifstream result(result_file);
+    ifstream cs(choose_file);
+    
+    vector<float> chs;
+    while(cs.getline(c_str, 500)) {
+        chs.push_back(stof(c_str));
+    }
+    
+    int itr = 0;
+    int num_tweet = tweet.size();
+    float total_z = 0.0;
+    float temp_z = 0.0;
+    clock_t start = clock();
+    IloNum t = 0.0;
+    float cover_twt[num_tweet];
+    
+    fill_n(cover_twt, num_tweet, 0.0);
+    
+    while(result.getline(t_str, 1004)) {
+        
+        fill_n(cover_twt, num_tweet, 0.0);
+        
+        if((itr > 2) && (chs[itr]==0.0)) {
+            itr += 1;
+            continue;
+        }
+        cout << t_str << endl;
+        
+        for (int twt_num=0; twt_num<num_tweet;twt_num++) {
+            // social sensor의 집합
+            //cout << twt_num << endl;
+            string temp = to_string(twt_num) + " " + t_str;
+            int mode_ = mode;
+            int length = 1;
+            float covered = (float)process_query(1, temp, 0);
+            cout << twt_num << " " << tweet[twt_num].tree_size << endl;
+            while (mode_ != 0) {
+                int type = mode_ % 10;
+                if (type==1) {
+                    //covered
+                    cover_twt[twt_num] += covered;
+                }
+                else if(type==2) {
+                    //topic covered
+                    if (covered == 1.0) {
+                        for (int topic_num=0;topic_num<tweet[twt_num].topic.size();topic_num++)
+                            cover_twt[twt_num] += (float)tweet[twt_num].topic[topic_num];
+                    }
+                }
+                else if(type==3) {
+                    //out-link
+                    if (covered == 1.0) {
+                        cover_twt[twt_num] += (float)tweet[twt_num].rtw_count/MAX_OUT;
+                    }
+                }
+                else if(type==4) {
+                    //time reward
+                    cover_twt[twt_num] += (float)process_query(5, temp, 0);
+                }
+                mode_ /= 10;
+                length += 1;
+            }
+            cover_twt[twt_num] /= (float)length-1.0;
+            temp_z += cover_twt[twt_num];
+            
+        }
+        exp << chs[itr] << " " << temp_z << "\n";
+        cout << chs[itr] << " " << temp_z << endl;
+        total_z += chs[itr]*temp_z;
+        temp_z = 0.0;
+        itr += 1;
+    }
+    
+    
+    
+    cout << "calculate_obj time elapsed : " << (clock()-start)/CLOCKS_PER_SEC << endl;
+    cout << "total_z : " << total_z << endl;
+    cout << "the number of tweet : " << num_tweet << endl;
+    exp << "cover : " << (float)total_z/num_tweet << "\n";
+    cout << "cover : " << (float)total_z/num_tweet << endl;
+    
+    exp.close();
 }
-
-
+void ev4_train(int mode) {
+    process_userdata(in);
+    
+    // social sensor 불러오기 -> 한 줄에 다 있다고 가정
+    char t_str[1004];
+    char c_str[100];
+    //string file_name = "result_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+".txt";
+    string result_file = "ev4/_result_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt";
+    string choose_file = "choose_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt";
+    
+    ofstream exp;
+    string file_name = "ev4/_tev_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt";
+    exp.open(file_name);
+    
+    ifstream result(result_file);
+    ifstream cs(choose_file);
+    
+    vector<float> chs;
+    while(cs.getline(c_str, 100)) {
+        chs.push_back(stof(c_str));
+    }
+    
+    int itr = 0;
+    int num_tweet = tweet.size();
+    float total_z = 0.0;
+    float temp_z = 0.0;
+    clock_t start = clock();
+    IloNum t = 0.0;
+    float cover_twt[num_tweet];
+    //for (int j=0; j<num_tweet;j++)
+    //cover_twt[j] = 0.0;
+    
+    fill_n(cover_twt, num_tweet, 0.0);
+    
+    while(result.getline(t_str, 1004)) {
+        
+        //for (int j=0; j<num_tweet;j++) {
+        //cover_twt[j] = 0.0;
+        //}
+        fill_n(cover_twt, num_tweet, 0.0);
+        
+        if((itr > 2) && (chs[itr]==0.0)) {
+            itr += 1;
+            continue;
+        }
+        cout << itr << endl;
+        
+        for (int twt_num=0; twt_num<num_tweet;twt_num++) {
+            // social sensor의 집합
+            //cout << twt_num << endl;
+            string temp = to_string(twt_num) + " " + t_str;
+            int mode_ = mode;
+            int length = 1;
+            float covered = (float)process_query(1, temp, 0);
+            while (mode_ != 0) {
+                int type = mode_ % 10;
+                if (type==1) {
+                    //covered
+                    cover_twt[twt_num] += covered;
+                }
+                else if(type==2) {
+                    //topic covered
+                    if (covered == 1.0) {
+                        for (int topic_num=0;topic_num<tweet[twt_num].topic.size();topic_num++)
+                            cover_twt[twt_num] += (float)tweet[twt_num].topic[topic_num];
+                    }
+                }
+                else if(type==3) {
+                    //out-link
+                    if (covered == 1.0) {
+                        cover_twt[twt_num] += (float)tweet[twt_num].rtw_count/MAX_OUT;
+                    }
+                }
+                else if(type==4) {
+                    //time reward
+                    cover_twt[twt_num] += (float)process_query(5, temp, 0);
+                }
+                mode_ /= 10;
+                length += 1;
+            }
+            cover_twt[twt_num] /= (float)length-1.0;
+            temp_z += cover_twt[twt_num];
+            
+        }
+        exp << chs[itr] << " " << temp_z << "\n";
+        cout << chs[itr] << " " << temp_z << endl;
+        total_z += chs[itr]*temp_z;
+        temp_z = 0.0;
+        itr += 1;
+    }
+    
+    
+    
+    cout << "calculate_obj time elapsed : " << (clock()-start)/CLOCKS_PER_SEC << endl;
+    cout << "total_z : " << total_z << endl;
+    cout << "the number of tweet : " << num_tweet << endl;
+    exp << "cover : " << (float)total_z/num_tweet << "\n";
+    cout << "cover : " << (float)total_z/num_tweet << endl;
+    
+    exp.close();
+}
 double process_query(int type, string inp, int topic_num) {
     
     char t_str[1004];
@@ -348,7 +831,7 @@ double process_query(int type, string inp, int topic_num) {
         string sensor_id;
         tweet_index = stoi(tokens[0]);
         user_cnt = stoi(tokens[1]);
-        
+        //cout << 1;
         //fscanf(query_in, "%d", &tweet_index);
         //fscanf(query_in, "%d", &user_cnt);
         int flag = 0;
@@ -356,10 +839,13 @@ double process_query(int type, string inp, int topic_num) {
             //fprintf(query_out, "2\n");//Out of index
             flag = 1;
         }
+        //cout << 2;
         for (int it = 0; it < user_cnt; it++) {
             strncpy(t_str, tokens[it+2].c_str(), sizeof(t_str)-1);
+            //cout << 3;
             if(sizeof(t_str)>0)
                 t_str[sizeof(t_str)-1] = 0;
+            //cout << 4;
             //fscanf(query_in, "%s", t_str);
             if (flag == 0) {
                 sensor_id = t_str;
@@ -368,6 +854,7 @@ double process_query(int type, string inp, int topic_num) {
                     //fprintf(query_out, "3\n");//no user found
                     flag = 1; continue;
                 }
+                //cout << 5;
                 for (i = 0; i < len; i++)
                 {
                     if (tweet[user[sensor_id].tweets[i]].identifier == tweet[tweet_index].identifier) {
@@ -376,6 +863,7 @@ double process_query(int type, string inp, int topic_num) {
                         return 1.0;
                     }
                 }
+                //cout << 6;
             }
         }
         if (flag == 0) return 0.0;//fprintf(query_out, "0\n");//Not Covered
@@ -460,8 +948,7 @@ double process_query(int type, string inp, int topic_num) {
                 if (tweet[user[sensor_id].tweets[i]].identifier == tw_identifier) {
                     //Covered
                     if (minv > (tweet[user[sensor_id].tweets[i]].time - tweet[tweet[user[sensor_id].tweets[i]].root_index].time)) {
-                        minv = tweet[user[sensor_id].tweets[i]].time - tweet[tweet[user[sensor_id].tweets[i]].root_index].time;
-                    }
+                        minv = tweet[user[sensor_id].tweets[i]].time - tweet[tweet[user[sensor_id].tweets[i]].root_index].time;                    }
                 }
             }
         }
@@ -626,139 +1113,145 @@ void pricing_algorithm(int n, IloNumArray dv) {
         tweet[i].is_covered=0;
     }
 }
-
-IloNumArray run_iteration(IloEnv env,IloModel curOpt, IloNumVarArray choose, IloRangeArray constraints, IloNumVarArray cover, int num_tweet,int num_user, int num_pattern, int num_mode, int mode) {
-
-    //  여기서부터 constraints add...
-    //  현재 row-wise이므로 column-wise로 변경해줘야함..
-    constraints.add(IloSum(choose) <= 1);
-    cout << "mode : " << mode << endl;
-    //////
-    IloNumArray cover_w(env, num_pattern, 0.0, 1.0, ILOFLOAT);
-    for (int k=0;k<num_tweet;k++) {
-        for (int l=0;l<num_pattern;l++) {
-            string temp;
-            // concat initial user names
-            //inp = "tweet_num the_num_of_ppl_in_ss a b c"
-            int length = 1;
-            int mode_ = mode;
-            temp = to_string(k) + " " + to_string(ss)+first_ss[l];
-            cover_w[l] = 0.0;
-            float covered = (float)process_query(1, temp, 0);
-            while (mode_ != 0) {
-                int type = mode_ % 10;
-                if (type==1) {
-                    //covered
-                    cover_w[l] += covered;
-                }
-                else if(type==2) {
-                    //topic covered
-                    if (covered == 1.0) {
-                        tweet[k].topic.size();
-                        for (int topic_num=0;topic_num<3;topic_num++)
-                            cover_w[l] += (float)tweet[k].topic[topic_num];
-                    }
-                }
-                else if(type==3) {
-                    //out-link
-                    if (covered == 1.0) {
-                        cover_w[l] += (float)tweet[k].rtw_count/MAX_OUT;
-                    }
-                }
-                else if(type==4) {
-                    //time reward
-                    cover_w[l] += (float)process_query(5, temp, 0);
-                }
-                
-                mode_ /= 10;
-                
-            }
-        }
-        constraints.add(IloScalProd(choose, cover_w)-cover[k]>=0);
-    }
-    ///////
+IloNumArray run_iteration(IloEnv env, IloModel curOpt, IloObjective obj, IloRangeArray constraints, int num_tweet, int mode, IloNumVarArray choose) {
+    IloNumArray dv(env, num_tweet);
     
+    curOpt.add(obj);
+    curOpt.add(constraints);
+    curOpt.add(IloSum(choose)<=1);
+    
+    IloCplex cplex(curOpt);
+    //cplex.exportModel("model.lp");
+    cplex.solve();
+    
+    IloNumArray ch(env);
+    cplex.getValues(ch, choose);
+    
+    // choose 확률
+    ofstream res;
+    res.open("choose_"+to_string(d_mode)+"_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr)+to_string(max_prob)+".txt");
+
+    for (int t=0;t<ch.getSize();t++) {
+        cout << "choose " << t << " : " << ch[t] << endl;
+        res << ch[t] << "\n";
+    }
+    res << "\n";
+    
+    for (int t=0;t<num_tweet;t++) {
+        IloNumArray csts(env, ch.getSize());
+        int t_ = 0;
+        for (IloExpr::LinearIterator it = constraints[t].getLinearIterator();it.ok();++it) {
+            csts[t_] = it.getCoef();
+            t_ ++;
+        }
+        dv[t] = IloNum(1) - IloScalProd(ch, csts);
+    }
+    
+    //cplex.getDuals(dv, constraints);
+    
+    // dv 값 파일에 출력하기
     ofstream myfile;
-    string file_name = "const3_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr);
+    string file_name = "dv_"+to_string(mode)+"_"+to_string(ss)+"_"+to_string(itr);
     myfile.open(file_name);
-    for (int h=0;h<constraints.getSize();h++) {
-        myfile << constraints[h] << "\n";
+    for (int h=0;h<dv.getSize();h++) {
+        myfile << dv[h] << "\n";
     }
     myfile.close();
     
-    cout << "Constraints added..." << endl;
-    curOpt.add(constraints);
-    curOpt.add(IloMaximize(env, IloSum(cover)));
-    
-    cout << "IloMaximize complete..." << endl;
-    //  define solver
-    IloCplex ssSolver(curOpt);
-    
-    cout << "ssSolver complete..." << endl;
-    //  pattern-generation
-    //patGen.add(IloScalProd(size, ss) <= IloNum(ss));
-    
-    //IloCplex patSolver(patGen);
-    //IloNumArray newPatt(env, NUM_SS);
-    
-    //  column-generation - dual value구하기(itr에 횟수 제한 해서 그만큼 돌리기 먼저 10번? 짧게 돌려볼 것)
-    //  MAX_ITR에서 정한 만큼 돌리기
-    IloNumArray dv(env, num_tweet);
-    
-    
-    cout << "ssSolver start" << endl;
-    ssSolver.solve();
-    cout << "ssSolver end" << choose[0] << endl;
-    
-
-    
-    cout << "choose : " << choose << endl;
-    report1(ssSolver,choose);
-    cout << "get dual start" << endl;
-    for (int m=0;m<num_tweet;m++) {
-        //dv[m] = -ssSolver.getDual(constraints[m+1]);
-        dv[m] = IloNum(1) - ssSolver.getValue(cover[m]);
-    }
-    
-    
-    
-    
-    ssSolver.end();
     
     return dv;
 }
 
 
 //  트위터 데이터로 트리 만들기
-void process_userdata()
+void process_userdata(FILE *in)
 {
+    // 초기화 해주기
+    tweet.clear();
+    user.clear();
+    
     int i, j, k;
     _tweet temp;
-    char t_str[1004];
+    char t_str[1000004];
     int t_tnum;
     float t_int;
-    int save;
+    int save=0;
     k = 1;
     while (true)
     {
         k++;
+        //cout << save << endl;
         fscanf(in, "%d", &temp.type);
         if (temp.type == 2)break;
         fscanf(in, "%s", t_str);//user_id:
+        if(strcmp(t_str,"user_id:")!=0)
+        {
+            cout<<"something is wrong ."<<endl;
+            cout<<"user id: is "<<t_str<<endl;
+            for(int pp=0;pp<100;pp++){
+                fscanf(in, "%s", t_str);//topic:
+                cout<<"\n "<<t_str<<endl;
+            }
+            for(;;);
+        }
         fscanf(in, "%s", t_str);//temp.user_id
         temp.user_id = t_str;
-        fscanf(in, "%s", t_str);//user_id:
+        fscanf(in, "%s", t_str);//time:
+        if(strcmp(t_str,"time:")!=0)
+        {
+            cout<<"something is wrong ."<<endl;
+            cout<<"time: is "<<t_str<<endl;
+            for(int pp=0;pp<100;pp++){
+                fscanf(in, "%s", t_str);//topic:
+                cout<<"\n "<<t_str<<endl;
+            }
+            for(;;);
+        }
         fscanf(in, "%lld.0", &temp.time);
+        int flag=0;
         if (temp.type == 1) {
             fscanf(in, "%s ", t_str);//body:
+            if(strcmp(t_str,"body:")!=0)
+            {
+                cout<<"something is wrong ."<<endl;
+                cout<<"body: is "<<t_str<<endl;
+                for(int pp=0;pp<100;pp++){
+                    fscanf(in, "%s", t_str);//topic:
+                    cout<<"\n "<<t_str<<endl;
+                }
+                for(;;);
+            }
             save = tweet.size();//가장 최근에 나온 root tweet을 저장함.
-            fgets(t_str, 10000, in);
+            fgets(t_str, 1000000, in);
             temp.body = t_str;//body 내용을 입력받음.
+            if(strcmp(t_str,"topic:")==0||strlen(t_str)==0)
+            {
+                flag=1;
+                for(int pp=0;pp<100;pp++){
+                    fscanf(in, "%s", t_str);//topic:
+                    cout<<"\n "<<t_str<<endl;
+                }
+                for(;;);
+            }
         }
         else {
             temp.body = "";
         }
-        fscanf(in, "%s", t_str);//topic_num:
+        if(flag==0)
+        {
+            fscanf(in, "%s", t_str);//topic:
+            
+            if(strcmp(t_str,"topic:")!=0){
+                cout<<"something is wrong ."<<endl;
+                cout<<"topic: is "<<t_str<<endl;
+                for(int pp=0;pp<100;pp++){
+                    fscanf(in, "%s", t_str);//topic:
+                    cout<<"\n "<<t_str<<endl;
+                }
+                for(;;);
+            }
+        }
+        else flag=0;
         fscanf(in, "%d", &t_tnum);//topic num 입력받음
         temp.topic.clear();
         for(i=0;i<t_tnum;i++){
@@ -766,6 +1259,16 @@ void process_userdata()
             temp.topic.push_back(t_int);
         }
         fscanf(in, "%s", t_str);//rtw_count:
+        if(strcmp(t_str,"rtw_count:")!=0)
+        {
+            cout<<"something is wrong ."<<endl;
+            cout<<"rtw_count: is "<<t_str<<endl;
+            for(int pp=0;pp<100;pp++){
+                fscanf(in, "%s", t_str);//topic:
+                cout<<"\n "<<t_str<<endl;
+            }
+            for(;;);
+        }
         fscanf(in, "%d", &temp.rtw_count);
         if (temp.type == 0) {//자식 tweet(RT)
             temp.identifier = tweet[save].identifier;
